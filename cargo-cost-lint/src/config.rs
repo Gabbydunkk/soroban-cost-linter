@@ -38,7 +38,8 @@ impl BudgetConfig {
                         lint,
                         path_display,
                         known_lints.join(", ")
-                    ).into());
+                    )
+                    .into());
                 }
                 if !matches!(level.as_str(), "allow" | "warn" | "deny") {
                     return Err(format!(
@@ -163,7 +164,12 @@ soroban_storage_in_loop = "deny"
         write_file(&path, "[lints]\nnot_a_real_lint = \"deny\"\n");
         let result = BudgetConfig::from_file_validated(&path, KNOWN_LINTS);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unknown lint name"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown lint name")
+        );
     }
 
     #[test]
@@ -173,7 +179,12 @@ soroban_storage_in_loop = "deny"
         write_file(&path, "[lints]\nsoroban_storage_in_loop = \"oops\"\n");
         let result = BudgetConfig::from_file_validated(&path, KNOWN_LINTS);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unknown lint level"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown lint level")
+        );
     }
 
     #[test]
