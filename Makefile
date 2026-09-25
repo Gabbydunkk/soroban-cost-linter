@@ -1,4 +1,4 @@
-.PHONY: fmt fmt-check lint test check-docs bench doc check
+.PHONY: fmt fmt-check lint test check-docs sync-lint-data bench doc check
 
 fmt:
 	cargo fmt --all
@@ -14,6 +14,11 @@ test:
 
 check-docs:
 	cargo run -p generate-lint-docs -- --check
+
+# Refresh cargo-cost-lint/lint-data/, the snapshot build.rs reads when the
+# crate is built outside this workspace (e.g. from a published package).
+sync-lint-data:
+	UPDATE_LINT_DATA=1 cargo test -p cargo-cost-lint --test lint_data_snapshot
 
 bench:
 	cargo bench -p cargo-cost-lint

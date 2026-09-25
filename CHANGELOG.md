@@ -40,6 +40,7 @@ and this project adheres to Semantic Versioning.
 
 ### Changed
 
+- `cargo-cost-lint` can now be packaged and published: `build.rs` falls back to a bundled snapshot in `cargo-cost-lint/lint-data/` when built outside the workspace, `publish = false` is removed, and the manifest has a `description`. Refresh the snapshot with `make sync-lint-data`; a test fails when it drifts.
 - `unnecessary_host_function_call` now covers every host accessor reachable from
   `Env` — `crypto()`, `prng()`, `events()`, `deployer()` and
   `current_contract_address()` alongside `ledger()` — and no longer reports
