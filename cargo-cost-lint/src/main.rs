@@ -8,7 +8,7 @@ mod output_formatters;
 
 use clap::{ArgGroup, Parser, ValueEnum};
 use output_formatters::{LintFinding, OutputFormat, Span};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -517,7 +517,8 @@ pub fn resolve_config(config_arg: Option<&str>) -> Result<Option<PathBuf>, Strin
 // Kept: scaffolding for future feature implementations
 #[allow(dead_code)]
 fn parse_budget_config(path: &str) -> Result<Vec<String>, String> {
-    let config = config::BudgetConfig::from_file_validated(Path::new(path), LINT_NAMES)?;
+    let config = config::BudgetConfig::from_file_validated(Path::new(path), LINT_NAMES)
+        .map_err(|e| e.to_string())?;
 
     let mut lint_flags = Vec::new();
     if let Some(lints) = config.lints {
