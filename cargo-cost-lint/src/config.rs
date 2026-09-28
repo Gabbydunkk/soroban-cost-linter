@@ -240,7 +240,7 @@ lints = { "soroban_storage_in_loop" = "deny" }
         write_file(&path, "[lints]\nsoroban_storage_in_loop = \"forbid\"\n");
         let result = BudgetConfig::from_file_validated(&path, KNOWN_LINTS);
         assert!(result.is_err());
-        let err = result.unwrap_err();
+        let err = result.unwrap_err().to_string();
         assert!(err.contains("Unknown lint level 'forbid'"), "{err}");
         assert!(err.contains("allow, warn, and deny"), "{err}");
     }
