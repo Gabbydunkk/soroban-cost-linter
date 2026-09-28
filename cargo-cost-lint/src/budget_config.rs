@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Debug, Default, Clone, PartialEq, Eq)]
 pub struct BudgetConfig {
     #[serde(default)]
-    pub lints: HashMap<String, String>,
+    pub lints: Option<HashMap<String, String>>,
 }
 
 /// Parse a `BudgetConfig` from the file at `config_path`.
@@ -38,94 +38,100 @@ pub fn parse_config_str(raw: &str) -> BudgetConfig {
         return BudgetConfig::default();
     }
 
-    toml::from_str::<BudgetConfigWrapper>(raw)
-        .map(|w| w.budget)
-        .unwrap_or_default()
+    if let Ok(wrapper) = toml::from_str::<BudgetConfigWrapper>(raw) {
+        if let Some(budget) = wrapper.budget {
+            return budget;
+        }
+    }
+    toml::from_str::<BudgetConfig>(raw).unwrap_or_default()
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone, PartialEq, Eq)]
 struct BudgetConfigWrapper {
     #[serde(default)]
-    budget: BudgetConfig,
+    budget: Option<BudgetConfig>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::File;
     use std::io::Write;
+    use tempfile::tempdir;
 
     fn write_file(path: &Path, contents: &str) {
-        let mut f = fs::File::create(path).unwrap();
+        let mut f = File::create(path).unwrap();
         f.write_all(contents.as_bytes()).unwrap();
     }
 
     #[test]
     fn empty_file_returns_defaults() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let path = dir.path().join("empty.toml");
         write_file(&path, "");
 
         let config = parse_config(&path);
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn whitespace_only_file_returns_defaults() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let path = dir.path().join("whitespace.toml");
         write_file(&path, "   \n\t\n  ");
 
         let config = parse_config(&path);
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn missing_file_returns_defaults() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let path = dir.path().join("nonexistent.toml");
 
         let config = parse_config(&path);
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn invalid_toml_returns_defaults() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let path = dir.path().join("bad.toml");
         write_file(&path, "this is not [[valid toml");
 
         let config = parse_config(&path);
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn empty_string_returns_defaults() {
         let config = parse_config_str("");
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn whitespace_only_string_returns_defaults() {
         let config = parse_config_str("   \n\t  ");
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn invalid_toml_string_returns_defaults() {
         let config = parse_config_str("not valid {{{ toml");
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
     fn missing_budget_table_returns_defaults() {
-        let config = parse_config_str("foo = 1");
-        assert!(config.lints.is_empty());
+        let config = parse_config_str("[lints]\nsoroban_storage_in_loop = \"deny\"");
+        let lints = config.lints.as_ref().unwrap();
+        assert_eq!(lints.get("soroban_storage_in_loop").unwrap(), "deny");
     }
 
     #[test]
     fn missing_lints_field_returns_defaults() {
         let config = parse_config_str("[budget]\nother = 1");
-        assert!(config.lints.is_empty());
+        assert!(config.lints.is_none());
     }
 
     #[test]
@@ -135,13 +141,14 @@ mod tests {
 lints = { "soroban_storage_in_loop" = "deny" }
 "#;
         let config = parse_config_str(toml_str);
-        assert_eq!(config.lints.len(), 1);
-        assert_eq!(config.lints.get("soroban_storage_in_loop").unwrap(), "deny");
+        let lints = config.lints.as_ref().unwrap();
+        assert_eq!(lints.len(), 1);
+        assert_eq!(lints.get("soroban_storage_in_loop").unwrap(), "deny");
     }
 
     #[test]
     fn valid_config_file_parses_correctly() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let path = dir.path().join("good.toml");
         write_file(
             &path,
@@ -149,7 +156,8 @@ lints = { "soroban_storage_in_loop" = "deny" }
         );
 
         let config = parse_config(&path);
-        assert_eq!(config.lints.len(), 1);
-        assert_eq!(config.lints.get("redundant_env_clone").unwrap(), "warn");
+        let lints = config.lints.as_ref().unwrap();
+        assert_eq!(lints.len(), 1);
+        assert_eq!(lints.get("redundant_env_clone").unwrap(), "warn");
     }
 }
